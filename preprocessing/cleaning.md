@@ -191,7 +191,7 @@ plt.show()
 ```
 
 
-![png](missing_feature.png)
+![png](images/missing_feature.png)
 
 
 The percent emptiness graph shows that `square_feet` is over 90% empty. This is too empty for imputation, so we remove this feature.
@@ -274,7 +274,7 @@ print "Number of Neighborhoods:", len(nb_counts)
 ```
 
 
-![png](neighbour1.png)
+![png](images/neighbour1.png)
 
 
     Number of Neighborhoods: 186
@@ -304,7 +304,7 @@ entries = listings.shape[0]
 ```
 
 
-![png](neighbour2.png)
+![png](images/neighbour2.png)
 
 
     Number of entries removed:  2372
@@ -362,7 +362,7 @@ plt.show()
 ```
 
 
-![jpg](pairplot.jpg)
+![jpg](images/pairplot.jpg)
 
 
 After inspecting the data, we notice that `zipcode` and `city` are very correlated to each other - and both are also fairly correlated to latitude and longitude. Since these features are very messy, and have a high count of uniques (180+ for each) we will remove them. We also notice that the availability features (`availability_30`, `availability_60`, `availability_90`, and `availability_365`) are all highly correlated. We remove all but `availability_365`, as it is the least correlated to the other features.
