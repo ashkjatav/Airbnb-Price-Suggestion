@@ -22,25 +22,24 @@ One of the major difference between Uber and a typical Chicago taxi is that latt
 
 ### Objectives
 
-The objective of this project is to build visualization models which help in the interpretation of how Chicagoan uses their public taxi on an hourly and daily basis. Exploration and visualization aids in feature extraction for developing predictive models using different statistical learning algorithm. Our Predictive models aim to forecast the trip total amount and number of rides from a particular location on a given hour of the day.
+The objective of this project is to build price suggestion models which might help hosts in getting an idea of the fair price of their house. Exploration and visualization aids in feature extraction for developing predictive models using different statistical learning algorithm. Our Predictive models aim to forecast the listing price on a given day of the year.
 
 ### Target Audience
 
 Predictive and visualization models like these are interesting for many stakeholders: -
-1.	**Taxi firms**: Companies can allocate their resources effectively by diverting the cabs to a specific location during specific times. 
-2.	**Traffic planning**: We all have experienced a traffic delay on any special occasion, be it the end of a movie or on a Sunday when you are at the church, this project will help in traffic management. 
+1.	**Airbnb Hosts**: Hosts can identify competitive price for their house and give them a chance to improve their hospitality 
+2.	**Customers**: Anybody planning to book a hotel wants to get a competitive price with the maximum number of features. My price suggestion model will provide them a fair price on the listing of their choice.
 3.	**Data scientists**: As budding data scientists we always try to learn from other models and think about ways on how to improve the existing model, this helps in eliminating the need of reinventing the wheel.
 
 ### Data Acquisition
 
-The primary data source comes from the publicly available Chicago Cab data on Google BigQuery. As this data was incomplete(2013-2015 only), data of 2016 and 2017 was downloaded from City of Chicago webpage and incorporated into the existing dataset on Google BigQuery to perform the further visualization and prediction part.
+The primary data source comes from the publicly available Airbnb data website. I used listings, reviews and calendar data available on the website.
 
-* [Chicago Cab Data Year 2013-15](https://bigquery.cloud.google.com/table/bigquery-public-data:chicago_taxi_trips.taxi_trips?pli=1)
-* [Chicago Cab Data Year 2016-17](https://data.cityofchicago.org/Transportation/Taxi-Trips/wrvz-psew)
+* [Airbnb data](http://insideairbnb.com/get-the-data.html)
 
-In addition, weather data from NOAA was incorporated into the Cab data for prediction modeling.
+In addition, traffic data from ---- was incorporated into the Cab data for prediction modeling.
 
-* [Weather Data](https://www.ncdc.noaa.gov/cdo-web/search?datasetid=GHCND)
+* [Traffic Data]()
 
 ### Challenges & Counter Measures
 
@@ -69,8 +68,6 @@ Data Visualization models were built by using the entire data on Tableau, Tablea
 * [Seaborn](http://seaborn.pydata.org/): Data visualization built on Matplotlib.
 * [Pandas](http://pandas.pydata.org/): Data analysis tools.
 * [Scikit-learn](http://scikit-learn.org/stable/): Machine learning toolkit.
-* [NLTK](http://www.nltk.org/): Human language data processing.
-* [LightGBM](http://lightgbm.readthedocs.io/en/latest/Python-Intro.html): Gradient Boosting
 
 `R`
 * [dplyr](https://cran.r-project.org/web/packages/dplyr/dplyr.pdf): A Grammar of Data Manipulation
