@@ -16,31 +16,15 @@ Now that we have a good understanding of what our data looks like, the Airbnb da
 ### Import Libraries
 
 
-```python
-import sys
-import pandas as pd
-import seaborn as sns
-import numpy as np
-import matplotlib.pyplot as plt
-from collections import Counter
-from sklearn import preprocessing
-from sklearn.neighbors import KNeighborsRegressor as KNN
-from sklearn.neighbors import KNeighborsClassifier as KNNc
-import sklearn.metrics as Metrics
-import warnings
-%matplotlib inline
-```
-
-
-```python
-# Global variables
-BNB_BLUE = '#007A87'
-BNB_RED = '#FF5A5F'
-BNB_DARK_GRAY = '#565A5C'
-BNB_LIGHT_GRAY = '#CED1CC'
-
-# Global settings
-warnings.filterwarnings('ignore')
+```R
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(ggmap)
+library(sp)
+library(corrplot)
+library(GGally)
 ```
 
 ### Initial Feature Selection
