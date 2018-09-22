@@ -50,42 +50,27 @@ As a baseline, we can start by removing features that we intuitively sense will 
 * `last_review`: Time irrelevant to property data, high unique count.
 
 
-```python
-# Read in the data 
-listings = pd.read_csv('datasets/listings.csv', delimiter=',')
+```R
 
-# Split into predictor and response
-y = listings['price']
-del listings['price']
+df=df[,c('id', 'name' ,'host_id',
+         'neighbourhood',
+         'neighbourhood_cleansed' ,'city', 'zipcode' ,
+         'latitude' ,'longitude', 'is_location_exact' ,'property_type' ,'room_type',
+         'accommodates' ,'bathrooms', 'bedrooms', 'beds' ,'bed_type', 'square_feet',
+         'price','guests_included', 'extra_people',
+         'minimum_nights' ,'maximum_nights' , 'cleaning_fee','availability_30',
+         'availability_60', 'availability_90' ,'availability_365',
+         'number_of_reviews' ,
+         'review_scores_rating', 'review_scores_accuracy',
+         'review_scores_cleanliness', 'review_scores_checkin',
+         'review_scores_communication', 'review_scores_location',
+         'review_scores_value' ,'picture_url', 'price_bin', 'street')]
+         
+df$cleaning_fee= gsub("[^0-9\\.]","",df$cleaning_fee)
+df$cleaning_fee= as.numeric(df$cleaning_fee)
 
-# Store number of entries and features
-entries = listings.shape[0]
-features = listings.shape[1]
+head(df)
 ```
-
-
-```python
-# Features to drop
-bad_features = ['scrape_id', 'last_scraped', 'picture_url', 'host_picture_url', 
-                'host_id', 'neighbourhood', 'state', 'market', 'country',
-                'weekly_price', 'monthly_price', 'calendar_last_scraped',
-                'host_name', 'host_since', 'street', 'calendar_updated',
-                'first_review', 'last_review']
-
-listings.drop(bad_features, axis=1, inplace=True)
-features = listings.shape[1]
-
-print 'Number of entries:', entries
-print 'Number of features:', features
-listings.head(n=3)
-```
-
-    Number of entries: 27392
-    Number of features: 33
-
-
-
-
 
 <div>
 <table border="1" class="dataframe">
@@ -137,7 +122,7 @@ Before imputing missing values, we should examine the percentage of values that 
 
 
 ```R
-x=data.frame(sort(colSums(sapply(df, is.na)), decreasing = TRUE))
+x= data.frame(sort(colSums(sapply(df, is.na)), decreasing = TRUE))
 names(x)[1]= 'values_missing'
 
 x['feature']= rownames(x)
@@ -313,152 +298,4 @@ corr_df
 </div>
 
 
-
-
-```python
-# Remove features
-listings.drop(['zipcode', 'city', 'availability_30', 
-               'availability_60', 'availability_90'], axis=1, inplace=True)
-```
-
-
-```python
-missing_columns.remove('zipcode')
-```
-
-#### KNN Imputation on Missing Values
-To impute, we will take a slightly novel approach with KNN. We have multiple features with missing values, and KNN cannot impute on a column if other features have blank (NaN) entries. We can disregard features with missing values, but we could lose predictive power doing so. For example, the `beds` feature has less than 1% of it's data missing - if we are imputing on another feature (ie. `bedrooms`) and don't use `beds`, we sacrifice the predictive power it could offer.
-
-The approach we took is as follows: go through all features with missing values, and cross validate to find the best *k* for each feature. Since there is numerous missing columns, we need to temporarily impute using the median for all variables, except the target feature, to be able to conduct KNN on a given column. We repeat this method for all columns with missing entries to perform KNN across all columns.
-
-Since `property_type` is the only categorical variable with missing values left, we will impute it with KNN classification (not regression). Finally, we drop the `name` predictor because it is unique for every property. We later use this predictor in a Bag of Words feature we create, but `name` itself will not be useful predictor for us. We leave `id` in for now as we will use it to build new features later.
-
-
-```python
-# Remove features
-listings.drop('name', axis=1, inplace=True)
-```
-
-
-```python
-# KNN_predict
-# 
-# Function to predict missing data using KNN
-# Input: df_missing (dataframe)
-#        df_filled (dataframe)
-#        column_name (string)
-#        k (integer)
-# Output: df_predict (dataframe of predicted values)
-def KNN_predict(df_missing, df_temp, df_filled, column_name, k):
-    
-    # Training and test set
-    y = df_filled[column_name]
-    X_filled = df_filled.drop(column_name, axis = 1)
-    X_missing = df_temp.drop(column_name, axis = 1)
-    
-    # Predict with KNN
-    if df_filled[column_name].dtype == np.dtype('float64'):
-        knn = KNN(n_neighbors = k, n_jobs = -1)
-    else:
-        knn = KNNc(n_neighbors = k, n_jobs = -1)
-    knn.fit(X_filled, y)
-    df_predict = df_missing.copy()
-    df_predict[column_name] = knn.predict(X_missing)
-    
-    return df_predict
-
-# KNN_fill
-# 
-# Function to predict missing data for all columns using KNN
-# and temporary median displacement for other missing values in
-# other columns
-# Input: df (dataframe)
-#        missing_columns (list of strings)
-# Output: df_final (filled dataframe)
-def KNN_fill(df, missing_columns):
-    
-    # Separate the rows with missing data information
-    df_missing = df[pd.isnull(df).any(axis=1)]
-    df_filled = df[~pd.isnull(df).any(axis=1)]
-    test_ind = int(0.3 * len(df_filled.index))
-
-    # Find an appropriate k for KNN
-    best_ks = [] 
-
-    # Go through all columns with missing data, skip property type
-    for column in missing_columns:
-        # Impute with median temporarily (only quantitative missing values in our
-        # model at this point so no need for mode)
-        temp_df = df_missing.copy()
-        for c in missing_columns:
-            # Do not impute selected column
-            if c != column:
-                temp_df[c].fillna((temp_df[c].median()), inplace = True)
-
-        # Create 10 simulated test and train set from df_filled
-        for k in range(10):  
-            RSS = []
-            scores = []
-            
-            # For each simulated test and train set, try k-values: 1 to 15 (counting by 2)
-            for k in range(1, 15, 2):
-                df_shuffled = df_filled.sample(frac=1)
-                df_test = df_shuffled.iloc[:test_ind, :]
-                df_train = df_shuffled.iloc[test_ind:, :]
-
-                #Fill rows with missing information
-                df_pred = KNN_predict(df_test, df_test, df_train, column, k)
-
-                #Compute score of filled in data
-                if df[column].dtype == np.dtype('float64'):
-                    RSS.append(((df_pred[column] - df_test[column])**2).mean())
-                else:
-                    scores.append(Metrics.accuracy_score(df_test[column], df_pred[column], normalize = True))
-
-
-            # Record the k that yields best score
-            if df[column].dtype == np.dtype('float64'):
-                best_ks.append(np.argmin(RSS) + 1)
-            else:
-                best_ks.append(np.argmax(scores) + 1)
-
-        # Take the mean of the best k over 100 simulations
-        best_k = int(np.mean(best_ks))
-
-        # Fill rows with missing information, using the optimal k
-        df_missing = KNN_predict(df_missing, temp_df, df_filled, column, best_k)
-        
-    # Concatenate rows with no missing info and the row we filled in
-    df_final = pd.concat([df_filled, df_missing])
-    df_final = df_final.sort_index()
-    
-    return df_final
-```
-
-
-```python
-# Encode categorical variables
-listings = listings.apply(encode_categorical)
-
-# Impute missing values with KNN
-del listings['price']
-listings_clean = KNN_fill(listings, missing_columns)
-
-# Append price to data
-listings = listings.join(y)
-listings_clean = listings_clean.join(y)
-```
-
-
-```python
-# Round values
-for c in missing_columns:
-    listings_clean[c] = listings_clean[c].round()
-```
-
-
-```python
-# Output cleaned dataframe
-listings_clean.to_csv(path_or_buf='datasets/listings_clean.csv')
-```
-
+#### Imputation on Missing Values
