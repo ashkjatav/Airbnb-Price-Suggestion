@@ -152,55 +152,27 @@ listings.head(n=3)
 Before imputing missing values, we should examine the percentage of values that are missing from each feature. Imputing data for a feature with too much missing data can bias the model.
 
 
-```python
-# percent_empty
-# 
-# Function to return percent of missing data in column
-# Input: df (data frame)
-# Output: None
-def percent_empty(df):
-    
-    bools = df.isnull().tolist()
-    percent_empty = float(bools.count(True)) / float(len(bools))
-    
-    return percent_empty, float(bools.count(True))
+```R
+x=data.frame(sort(colSums(sapply(df, is.na)), decreasing = TRUE))
+names(x)[1]= 'values_missing'
 
-# Store emptiness for all features
-emptiness = []
+x['feature']= rownames(x)
+x['perc_missing']= x['values_missing']/nrow(df)
+x= subset(x, perc_missing>0)
 
-missing_columns = []
+ggplot(x, aes(x=feature,y=perc_missing))+ geom_bar(stat='identity',color='darkblue', fill=red_col)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+ labs(x= 'Predictor', y='Percent Empty', title= 'Feature Emptiness')
 
-# Get emptiness for all features
-for i in range(0, listings.shape[1]):
-    p, n = percent_empty(listings.iloc[:,i])
-    if n > 0:
-        missing_columns.append(listings.columns.values[i])
-    emptiness.append(round((p), 2))
-    
-empty_dict = dict(zip(listings.columns.values.tolist(), emptiness))
-
-# Plot emptiness graph
-empty = pd.DataFrame.from_dict(empty_dict, orient = 'index').sort_values(by=0)
-ax = empty.plot(kind = 'bar', color='#E35A5C', figsize = (16, 5))
-ax.set_xlabel('Predictor')
-ax.set_ylabel('Percent Empty / NaN')
-ax.set_title('Feature Emptiness')
-ax.legend_.remove()
-
-plt.show()
 ```
-
-
 ![png](images/missing_feature.png)
 
 
 The percent emptiness graph shows that `square_feet` is over 90% empty. This is too empty for imputation, so we remove this feature.
 
 
-```python
-listings.drop('square_feet', axis=1, inplace=True)
-missing_columns.remove('square_feet')
-features = listings.shape[1]
+```R
+df= df %>% 
+  select(-square_feet)
 ```
 
 We need to also make sure making sure that all quantitative predictors and response variables are float. This will allow us to better deal with categorical data, and NaN entries in the float data.
@@ -213,67 +185,38 @@ We also remove entries (listings) that have faulty data such as:
 * There are 0 beds
 * Price is $0
 
-
-```python
-# Convert to floats
-y = y.apply(lambda s: float(s[1:].replace(',','')))
-listings['extra_people'] = listings['extra_people'].apply(lambda s: float(s[1:].replace(',','')))
-```
-
-
-```python
+```R
 # List of columns to be converted to floating point
-to_float = ['id', 'latitude', 'longitude', 'accommodates',
-            'bathrooms', 'bedrooms', 'beds', 'guests_included', 
-            'extra_people', 'minimum_nights', 'maximum_nights', 
-            'availability_30', 'availability_60', 'availability_90', 
-            'availability_365', 'number_of_reviews', 'review_scores_rating', 
-            'review_scores_accuracy', 'review_scores_cleanliness', 
-            'review_scores_checkin', 'review_scores_communication', 
-            'review_scores_location', 'review_scores_value', 'host_listing_count']
-
-# Converted columns to floating point
-for feature_name in to_float:
-    listings[feature_name] = listings[feature_name].astype(float)
+df$accommodates= as.integer(df$accommodates)
+df$bathrooms= as.integer(df$accommodates)
 ```
-
-
-```python
-# Delete bad entries
-listings = listings[listings.bedrooms != 0]
-listings = listings[listings.beds != 0]
-listings = listings[listings.bathrooms != 0]
-
-listings = listings.join(y)
-listings = listings[listings.price != 0]
-
-print 'Number of entries removed: ', entries - listings.shape[0]
-entries = listings.shape[0]
+#### Removing Erroneous Entries
+```R
+df= subset(df, bedrooms!=0)
+df= subset(df, beds!=0)
+df= subset(df, bathrooms!=0)            
+df= subset(df, price!=0)
 ```
-
-    Number of entries removed:  2399
 
 
 #### Trimming Neighborhood Entries
 When we explored our data we saw that geography was very important to pricing, especially on Manhattan. The `neighbourhood_cleansed` feature could therefore be important. Looking at the distribution below we notice it is heavily left-skewed.
 
 
-```python
-# Get number of listings in neighborhoods
-nb_counts = Counter(listings.neighbourhood_cleansed)
-tdf = pd.DataFrame.from_dict(nb_counts, orient='index').sort_values(by=0)
+```R
+df_neighbour= df %>% 
+  group_by(neighbourhood) %>% 
+  tally() %>% 
+  filter(neighbourhood!='') %>% 
+  rename(count=n)
+df_neighbour= df_neighbour[order(df_neighbour$count),]
+df_neighbour=df_neighbour[-c(12),]
 
-# Plot number of listings in each neighborhood
-ax = tdf.plot(kind='bar', figsize = (50,10), color = BNB_BLUE, alpha = 0.85)
-ax.set_title("Neighborhoods by Number of Listings")
-ax.set_xlabel("Neighborhood")
-ax.set_ylabel("# of Listings")
-plt.show()
+ggplot(df_neighbour, aes(x= reorder(neighbourhood, count), y=count))+ geom_bar(stat='identity',color='darkblue', fill=red_col)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  labs(x='Neighbourhood',y='# of Listing', title='Neighbourhood by number of Listing')
 
-print "Number of Neighborhoods:", len(nb_counts)
 ```
-
-
 ![png](images/neighbour1.png)
 
 
@@ -283,24 +226,12 @@ print "Number of Neighborhoods:", len(nb_counts)
 We see that the majority of the neighborhoods have less than 100 listings. We currently have 186 neighborhoods - all of these categorical predictors when one-hot encoded will weaken predictive power, so we will only keep neighborhoods with more than 100 listings.
 
 
-```python
-# Delete neighborhoods with less than 100 entries
-for i in nb_counts.keys():
-    if nb_counts[i] < 100:
-        del nb_counts[i]
-        listings = listings[listings.neighbourhood_cleansed != i]
+```R
+df_neighbour2= subset(df_neighbour, count>100)
+ggplot(df_neighbour2, aes(x= reorder(neighbourhood, count), y=count))+ geom_bar(stat='identity',color='darkblue', fill=red_col)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  labs(x='Neighbourhood',y='# of Listing', title='Neighbourhood by number of Listing')
 
-# Plot new neighborhoods distribution
-tdf = pd.DataFrame.from_dict(nb_counts, orient='index').sort_values(by=0)
-ax = tdf.plot(kind='bar', figsize = (22,4), color = BNB_BLUE, alpha = 0.85)
-ax.set_title("Neighborhoods by House # (Top 48)")
-ax.set_xlabel("Neighborhood")
-ax.set_ylabel("# of Listings")
-
-plt.show()
-
-print 'Number of entries removed: ', entries - listings.shape[0]
-entries = listings.shape[0]
 ```
 
 
@@ -314,54 +245,15 @@ entries = listings.shape[0]
 Looking through `zipcode` and `city` we realize that there is a lot of erroneous and incomplete data in these features. We will likely remove these features, but will examine multicollinearity to see how much is captured by other geographical features comparably. Before doing so, we need to deal with our missing values. To examine multicollinearity, we will temporarily drop all NaN values and label encode our data.
 
 
-```python
-# encode_categorical
-# 
-# Function to label encode categorical variables.
-# Input: array (array of values)
-# Output: array (array of encoded values)
-def encode_categorical(array):
-    if not array.dtype == np.dtype('float64'):
-        return preprocessing.LabelEncoder().fit_transform(array) 
-    else:
-        return array
+```R
+
+df_num= select_if(df_1, is.numeric)
+df_num= df_num %>% 
+  select(-host_id)
+ df_num= df_num[,c('price', 'accommodates','number_of_reviews', 'beds', 'bedrooms','cleaning_fee','availability_30', 'review_scores_rating')]
+ 
+ ggpairs(df_num)
 ```
-
-
-```python
-# Temporary listings dataframe
-temp_listings = listings.copy()
-
-# Delete additional entries with NaN values
-temp_listings = temp_listings.dropna(axis=0)
-
-# Encode categorical data
-temp_listings = temp_listings.apply(encode_categorical)
-```
-
-
-```python
-# Compute matrix of correlation coefficients
-corr_matrix = np.corrcoef(temp_listings.T)
-
-corr_df = pd.DataFrame(data = corr_matrix, columns = temp_listings.columns, 
-             index = temp_listings.columns)
-```
-
-
-```python
-# Display heat map 
-plt.figure(figsize=(7, 7))
-plt.pcolor(corr_matrix, cmap='RdBu')
-plt.xlabel('Predictor Index')
-plt.ylabel('Predictor Index')
-plt.title('Heatmap of Correlation Matrix')
-plt.colorbar()
-
-plt.show()
-```
-
-
 ![jpg](images/pairplot.jpg)
 
 
