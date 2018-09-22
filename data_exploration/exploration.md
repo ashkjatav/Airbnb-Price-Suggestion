@@ -10,17 +10,80 @@
 
 ## [Conclusion](../conclusion/conclusion.md)
 
-### Exploring Chicago Cab Data
+### Exploring Listings Data
 
-The first step in this study is Exploratory data analysis of the cab data. Our aim is to analyze how different features in the data-set relates to the other variables. We want to identify the variables that have a predictive potency while predicting the daily and hourly revenues of the taxis. The visualization part was done in Tableau given the size of the dataset.
+```R
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(ggmap)
+library(sp)
+library(corrplot)
+library(GGally)
 
-We begin by examining how Chicago cab business has changed over time, especially after the advent of the savvy competitors like Uber and Lyft. In Chicago, Uber and Lyft entered the cab business in 2011 and 2013 respectively.
-We plot the Total Yearly pickups and Total Yearly Fare graphs. From the first graph, it can be noticed that there is a sharp decline in the number of pickups with an annual rate of 35% after 2014. Total revenues per year follows the same trend with the total cab business at $18 million in 2016 as opposed to $35 million in 2013. This suggests Uber and Lyft has a grasp on the customer base with their competitive prices. 
+red_col= '#FF5A5F'
+df1= fread(.../listings_dec.csv")
+df2= fread(".../listings_sep.csv")
+
+df2=df2 %>% 
+  select(-is_business_travel_ready)
+df= rbind(df1, df2)
+df=unique(df)
+
+df$price= gsub("[^0-9\\.]","",df$price)
+df$price= as.numeric(df$price)
+
+df$price_bin= as.factor(ifelse(df$price %in% 0:100,1,
+                               ifelse(df$price %in% 101:300,2,
+                                      3)))
+ggplot(df, aes(x=price)) + geom_histogram(aes(y=..count../sum(..count..)),
+                                          color="darkblue", fill=red_col,bins = 50)+
+                          labs(x='Daily Listing Price in Dollars', y='Frequency', title='Distribution of Listing Prices: All Data')
+```
 
 ![png](images/price_all.png)
+
+```R
+ggplot(df, aes(x=price)) + geom_histogram(aes(y=..count../sum(..count..)),
+                                          color="darkblue", fill=red_col,bins = 50)+ xlim(0,1000)+
+  labs(x='Daily Listing Price in Dollars', y='Frequency', title='Distribution of Listing Prices: $0 - $1000')
+
+```
 ![png](images/price_1000.png)
+
+```R
+ggplot(df, aes(x=price)) + geom_histogram(aes(y=..count../sum(..count..)),
+                                          color="darkblue", fill=red_col,bins = 50)+ xlim(0,300)+
+  labs(x='Daily Listing Price in Dollars', y='Frequency', title='Distribution of Listing Prices: $0 - $300')
+```
 ![png](images/price_300.png)
+
+```R
+ggplot(df, aes(x=bedrooms)) + geom_histogram(aes(y=..count../sum(..count..)),
+                                             color="darkblue", fill=red_col, bins = 50)+ 
+  scale_x_continuous(labels=c(0:15), breaks = c(0:15))+
+  labs(x='Number of bedrooms', y='Percent of Listings', title='Percent of Listings by bedroom')
+
+```
 ![png](images/bedroom.png)
+```R
+lat <- c(40.5,40.95)
+long <- c(-74.2,-73.7)
+bbox <- make_bbox(long,lat,f=0.05)
+b <- get_map(bbox,maptype="terrain",source="stamen")
+
+ggmap(b)+ geom_point(data = df, aes(x = longitude, y = latitude,
+                                    color = price_bin), 
+                     size = 1.5, show.legend = TRUE)+ labs(title='NYC Airbnb Listings', x= 'Longitude', y='Latitude')+
+  scale_color_manual(name="Price", 
+                     labels = c("0-100", 
+                                "100-300", 
+                                "300+"), 
+                     values = c("1"="cyan3", 
+                                "2"="blue", 
+                                "3"="red"))
+```
 ![png](images/map.png)
 
 This has caused huge economic burden on the cabbies as they aren’t generating enough fares to keep up with their loan payments and meet their expenses. More than 350 foreclosure notices or foreclosure lawsuits have been initiated against medallion owners in the year 2017, compared to 266 in 2016 and 59 in 2015. Since October, lenders have filed lawsuits against at least 107 medallion owners who have fallen behind on loan payments, according to the union’s count. The major reason behind this financial distress is that since the emergence of Uber & Lyft, Cabbies face an uneven playing field with the ride-share companies, who typically don’t face the same permitting and fee rules. [1]
